@@ -41,45 +41,28 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_instance" "app_server" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = "t3.micro"
-  key_name      = aws_key_pair.deployer.key_name
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = "t3.micro"
+  key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.app.id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
 
-  user_data = <<EOF
-#!/bin/bash
-set -ex
+  user_data = <<-EOF
+    #!/bin/bash
+    apt-get update -y
+    apt-get install -y ca-certificates curl awscli
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    apt-get update -y
+    apt-get install -y docker-ce docker-ce-cli containerd.io
+    usermod -aG docker ubuntu
+    systemctl enable docker
+    systemctl start docker
+  EOF
 
-# Install Docker
-apt-get update -y
-apt-get install -y ca-certificates curl
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-chmod a+r /etc/apt/keyrings/docker.asc
-echo "deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \$(. /etc/os-release && echo "\$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-apt-get update -y
-apt-get install -y docker-ce docker-ce-cli containerd.io
-usermod -aG docker ubuntu
-systemctl enable docker
-systemctl start docker
-
-# Install AWS CLI
-apt-get install -y awscli
-
-# Get ECR login password and login to ECR
-ECR_REGISTRY="${var.ecr_registry_url}"
-ECR_REPOSITORY="${var.ecr_repository_name}"
-aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin $ECR_REGISTRY
-
-# Pull the latest image
-IMAGE_NAME=$ECR_REGISTRY/$ECR_REPOSITORY:latest
-docker pull $IMAGE_NAME
-
-# Run the container
-docker stop web-app 2>/dev/null || true
-docker rm web-app 2>/dev/null || true
-docker run -d --name web-app -p 80:80 $IMAGE_NAME
-EOF
+  user_data_replace_on_change = true
 
   tags = {
     Name = "pipeline-test"
@@ -115,4 +98,27 @@ resource "aws_security_group" "app" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
+
+resource "aws_iam_role" "ec2_ecr_role" {
+  name = "pipeline-test-ec2-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_read" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "pipeline-test-ec2-profile"
+  role = aws_iam_role.ec2_ecr_role.name
 }

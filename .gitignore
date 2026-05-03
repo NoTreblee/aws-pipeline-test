@@ -4,7 +4,6 @@
 ~/.aws/credentials
 ~/.aws/config
 ~/.ssh/*
-terraform.tfvars
 *.tfvars
 .docker/
 .idea/
@@ -14,3 +13,4 @@ terraform.tfvars
 *~
 .pipeline-test-key
 pipeline-test-key.pem
+terraform.tfvars
