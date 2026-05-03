@@ -61,12 +61,9 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: ECR_REGISTRY,ECR_REPOSITORY,AWS_REGION
+          envs: ECR_REGISTRY,ECR_REPOSITORY,ECR_PASSWORD
           script: |
-            export PATH=$PATH:/usr/bin:/usr/local/bin
-
-            /usr/bin/aws ecr get-login-password --region $AWS_REGION | \
-              docker login --username AWS --password-stdin $ECR_REGISTRY
+            echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin $ECR_REGISTRY
 
             docker stop web-app || true
             docker rm web-app || true
@@ -79,4 +76,4 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_PASSWORD: ${{ steps.login-ecr.outputs.docker_password }}
