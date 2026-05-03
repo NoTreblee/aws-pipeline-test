@@ -61,16 +61,16 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,AWS_REGION
+          envs: ECR_REGISTRY,ECR_REPOSITORY,AWS_REGION
           script: |
-            aws ecr get-login-password --region $AWS_REGION | \
+            export PATH=$PATH:/usr/bin:/usr/local/bin
+
+            /usr/bin/aws ecr get-login-password --region $AWS_REGION | \
               docker login --username AWS --password-stdin $ECR_REGISTRY
 
             docker stop web-app || true
             docker rm web-app || true
-
             docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
             docker run -d \
               --name web-app \
               --restart unless-stopped \
@@ -79,5 +79,4 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ github.sha }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
