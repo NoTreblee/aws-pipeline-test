@@ -14,3 +14,4 @@
 .pipeline-test-key
 pipeline-test-key.pem
 terraform.tfvars
+terraform/.terraform.lock.hcl
