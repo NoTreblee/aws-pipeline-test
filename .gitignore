@@ -1,0 +1,16 @@
+*.tfstate
+*.tfstate.*
+*.terraform/
+~/.aws/credentials
+~/.aws/config
+~/.ssh/*
+terraform.tfvars
+*.tfvars
+.docker/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.pipeline-test-key
+pipeline-test-key.pem
