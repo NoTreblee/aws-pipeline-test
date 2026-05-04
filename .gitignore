@@ -1,9 +1,6 @@
 *.tfstate
 *.tfstate.*
-*.terraform/
-~/.aws/credentials
-~/.aws/config
-~/.ssh/*
+.terraform/
 *.tfvars
 .docker/
 .idea/
@@ -11,7 +8,4 @@
 *.swp
 *.swo
 *~
-.pipeline-test-key
 pipeline-test-key.pem
-terraform.tfvars
-terraform/.terraform.lock.hcl
